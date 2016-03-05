@@ -3,7 +3,7 @@
 #
 # ShapeShift-cmd : Exchanging cryptocurrencies using command line with Shapeshift.io
 # 
-# Copyright 2016 Chiheb Nexus
+# Copyright © 2016 Chiheb Nexus
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
