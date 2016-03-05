@@ -69,7 +69,7 @@ class ShapeShiftCmd:
 			self.safe_exit()
 
 		try:
-			print("[+] Printing avaible coins:\n")
+			print("[+] Printing available coins:\n")
 			coins_name, coins_symbols = self.print_coins_symbols(coins)
 		except Exception as ex: 
 			print("Cannot print coins ...\nProgram will exit")
