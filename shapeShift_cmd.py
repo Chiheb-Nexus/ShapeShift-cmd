@@ -51,7 +51,7 @@ class ShapeShiftCmd:
 		"""
 		"""
 		coins, pairs, coins_name, coins_symbols = [], [], [], []
-		pair_to_exchange, withdraw_address, deposit_address = "", "", ""
+		pair_to_exchange, withdraw_address, deposit_address, refund_address = "", "", "", ""
 		try:
 			print("[+] Retrieving available coins ...")
 			coins = self.return_avaible_coins(self.url_coins)
@@ -94,13 +94,14 @@ class ShapeShiftCmd:
 			print("[+] Check if the exchange pair is valid ...")
 			if self.check_valid_pair(u_input.upper(), u_exchange.upper(), pairs):
 				pair_to_exchange = u_input.upper() + "_" + u_exchange.upper()
-				print(" |-> Validation: {0} is valid".format(pair_to_exchange))
+				print(" |-> Validation: {0}/{1} is valid".format(pair_to_exchange.split("_")[0], pair_to_exchange.split("_")[1]))
 				break
 			else:
 				print(" |-> Validation: Not valid pair!")
 
 		try:
-			print("[+] Printing ShapeShift.io market price for {0}".format(pair_to_exchange))
+			print("[+] Printing ShapeShift.io market price for {0}/{1}".format(pair_to_exchange.split("_")[0],\
+			 pair_to_exchange.split("_")[1]))
 			print(" |-> Done ... Printing:")
 			self.print_market_info_pair(self.url_market, pair_to_exchange)
 		except Exception as ex:
@@ -119,9 +120,23 @@ class ShapeShiftCmd:
 			except Exception as ex:
 				print("Cannot validate your address.\nProgram will exit")
 				self.safe_exit()
+		while True:
+			refund_address = input("Enter your {0} refund address (optional): ".format(pair_to_exchange.split("_")[0]))
+			try:
+				if refund_address == "":
+					refund_address = None
+					break
+				if self.validate_address(self.url_valid_address, refund_address, pair_to_exchange.split("_")[0]):
+					print(" |-> Your address is valid")
+					break
+				else:
+					print("Enter a valid {0} address".format(pair_to_exchange.split("_")[0]))
+			except Exception as ex:
+				print("Cannot validate your address.\nProgram will exit")
 
 		try:
-			deposit_address = self.post_exchange_request(self.url_post_exchange, pair_to_exchange, withdraw_address)
+			deposit_address = self.post_exchange_request(self.url_post_exchange, pair_to_exchange, withdraw_address,\
+			 refund_address)
 			self.transaction_status(self.url_tx_status, deposit_address)
 		except Exception as ex:
 			print("Cannot figure the transaction status.\nProgram will exit")
@@ -132,7 +147,7 @@ class ShapeShiftCmd:
 		"""
 		"""
 		rate, limit_deposit, min_deposit, miner_fees = self.return_market_info(self.url_market, pair_to_exchange)
-		print("|\t\t {0}".format(pair_to_exchange))
+		print("|\t\t {0}/{1}".format(pair_to_exchange.split("_")[0], pair_to_exchange.split("_")[1]))
 		print("---------------------------------------------------")
 		print("| Rate \t\t\t:\t{0}".format(rate))
 		print("| Limit deposit  \t:\t{0}".format(limit_deposit))
@@ -252,9 +267,11 @@ class ShapeShiftCmd:
 		content = response.read()
 		data = loads(content.decode("UTF-8"))
 
-		print("You'll deposit {0} to get {1}.".format(data["depositType"], data["withdrawalType"]))
-		print("Please deposit your {0} to this address:\t {1}".format(data["depositType"], data["deposit"]))
-		print("Your {0} will be send to this address:\t {1}".format(data["withdrawalType"], data["withdrawal"]))
+		print("You'll deposit \x1B[33;10m{0}\x1B[0m to get \x1B[33;10m{1}\x1B[0m.".format(data["depositType"], data["withdrawalType"]))
+		print("Please deposit your \x1B[33;10m{0}\x1B[0m to this address:\t \x1B[37;10m{1}\x1B[0m".format(data["depositType"], data["deposit"]))
+		print("Your \x1B[33;10m{0}\x1B[0m will be send to this address:\t \x1B[37;10m{1}\x1B[0m".format(data["withdrawalType"], data["withdrawal"]))
+		if return_address != None:
+			print("Your \x1B[33;10m{0}\x1B[0m refund address is: \x1B[37;10m{1}\x1B[0m".format(data["depositType"], return_address))
 
 		return data["deposit"]
 
@@ -265,30 +282,32 @@ class ShapeShiftCmd:
 
 		while True:
 			data = self.load_url_data(url+address)
-			if sleeping_time_sec == 600:
-				print("\nExit with status: ", data["status"])
-				break
+			
 
-			elif data["status"] == "no_deposits":
+			if data["status"] == "no_deposits":
+				if sleeping_time_sec == 600:
+					print("\nExit with status: ", data["status"])
+					break
+
 				remaning_sec = 600 - sleeping_time_sec
 				m, s = divmod(remaning_sec, 60)
 				remaning_minutes = "%02d:%02d" %(m,s)
-				msg = r'Waiting the deposit to this address: {0}	ETA: {1}'.format(data["address"], remaning_minutes)
+				msg = r'Waiting the deposit to this address: {0}			ETA: {1}'.format(data["address"], remaning_minutes)
 				print("\r{0}".format(msg), end= "")
 
 			elif data["status"] == "received":
-				msg = r'We see a new deposit but we have not finished it!. Please wait...'
+				msg = r'We see a new deposit but we have not finished it!. Please wait...{0}'.format(35*" ")
 				print("\r{0}".format(msg), end = "")
 
 			elif data["status"] == "complete":
-				print("Deposit complete!")
+				print("\nDeposit complete!")
 				print("Transaction info:")
 				print("[-] You've made a deposit to this address: {0}\n\
-					[-] Withdrawal address: {1}\n\
-					[-] You've desposit: {2}{3}\n\
-					[-] You'll have: {4}{5}\n\
-					[-] Transaction ID: {6}".format(data["address"], data["withdraw"], data["incomingCoin"],
-						data["incomingType"], data["outgoingCoin"], data["outgoingType"], data["transaction"]))
+[-] Withdrawal address: {1}\n\
+[-] You've desposit: {2}{3}\n\
+[-] You'll have: {4}{5}\n\
+[-] Transaction ID: {6}".format(data["address"], data["withdraw"], data["incomingCoin"],
+	data["incomingType"], data["outgoingCoin"], data["outgoingType"], data["transaction"]))
 				break
 
 			sleeping_time_sec+= 5
