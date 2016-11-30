@@ -1,4 +1,6 @@
 # ShapeShift-cmd
+[![Build Status](https://drone.io/github.com/Chiheb-Nexus/ShapeShift-cmd/status.png)](https://drone.io/github.com/Chiheb-Nexus/ShapeShift-cmd/latest)
+
 Exchange cyrptocurrencies using command line with ShapeShift.io
 
 #Dependencies:
